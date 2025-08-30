@@ -368,3 +368,260 @@ public class Example {
 - **CMS** → Legacy low-pause collector, but suffers from fragmentation → deprecated.  
 - **G1** → General-purpose default, good balance of throughput and low pause times.  
 - **ZGC** → Next-gen, ultra-low pause times, handles huge heaps efficiently.  
+
+# Question 7. What is the difference between checked and unchecked exceptions?
+# ⚠️ Checked vs Unchecked Exceptions in Java
+
+## 🔹 Checked Exceptions
+- **Definition**: Exceptions that must be either **caught** or **declared** in the method signature using `throws`.
+- Checked at **compile time** → compiler enforces handling.
+- Usually represent **recoverable conditions** (things the programmer can anticipate and handle).
+- **Examples**:
+  - `IOException`
+  - `SQLException`
+  - `FileNotFoundException`
+
+### Example
+```java
+import java.io.*;
+
+public class CheckedExample {
+    public static void main(String[] args) {
+        try {
+            FileReader fr = new FileReader("test.txt"); // FileNotFoundException
+        } catch (IOException e) {
+            System.out.println("File not found!");
+        }
+    }
+}
+```
+## 🔹 Unchecked Exceptions
+
+- **Definition**: Exceptions that do **not** need to be declared in the method signature or explicitly caught.  
+- **Checked at**: Runtime (the compiler does not enforce handling).  
+- **Purpose**: Usually represent **programming errors** such as logic mistakes or misuse of APIs.  
+- **Examples**:  
+  - `NullPointerException`  
+  - `ArrayIndexOutOfBoundsException`  
+  - `ArithmeticException`  
+  - `IllegalArgumentException`  
+
+```java
+public class UncheckedExample {
+    public static void main(String[] args) {
+        int[] numbers = {1, 2, 3};
+        System.out.println(numbers[5]); // ArrayIndexOutOfBoundsException at runtime
+    }
+}
+```
+## 🔹 Key Differences
+
+| Aspect                | Checked Exceptions                              | Unchecked Exceptions                       |
+|-----------------------|------------------------------------------------|--------------------------------------------|
+| **Checked at**        | Compile time                                   | Runtime                                    |
+| **Handling required?**| Yes (must catch or declare with `throws`)       | No (optional)                              |
+| **Hierarchy**         | Subclass of `Exception` (but **not** `RuntimeException`) | Subclass of `RuntimeException`       |
+| **Represents**        | Anticipated **recoverable issues**              | Programming errors / logic bugs            |
+| **Examples**          | `IOException`, `SQLException`                  | `NullPointerException`, `ArithmeticException` |
+
+## ✅ Summary
+
+- **Checked exceptions** → Recoverable, must be declared or handled (**compile-time enforcement**).  
+- **Unchecked exceptions** → Programming errors, not enforced by compiler, occur at **runtime**.  
+
+# Question 8. How does `CompletableFuture` differ from `Future`?
+# 🔑 Difference between `Future` and `CompletableFuture`
+
+## 🔹 `Future` (Java 5)
+- Introduced in **Java 5** (`java.util.concurrent`).
+- Represents the result of an asynchronous computation.
+- **Limitations**:
+  - Cannot be manually completed.
+  - Blocking methods (`get()`) → you wait until the task finishes.
+  - No straightforward way to chain multiple tasks.
+  - No built-in exception handling.
+
+### Example with `Future`
+```java
+import java.util.concurrent.*;
+
+public class FutureExample {
+    public static void main(String[] args) throws Exception {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+
+        Future<Integer> future = executor.submit(() -> {
+            Thread.sleep(1000);
+            return 42;
+        });
+
+        // Blocks until result is available
+        System.out.println(future.get());
+
+        executor.shutdown();
+    }
+}
+```
+# Question 9. How does `Optional` help avoid `NullPointerException`? Any pitfalls?
+# 🔑 How `Optional` Helps Avoid `NullPointerException`
+
+## 🔹 What is `Optional`?
+- `Optional<T>` is a **container object** that may or may not contain a non-null value.
+- Instead of returning `null`, a method can return an `Optional<T>` to indicate **absence of a value**.
+
+---
+
+## 🔹 How it Helps
+1. **Explicitly communicates absence**
+   - Instead of returning `null`, methods return `Optional.empty()`.
+   - Caller knows they must **deal with the absence case**.
+
+2. **Safe access to value**
+   - Use methods like `isPresent()`, `ifPresent()`, `orElse()`, `orElseGet()`, `orElseThrow()` instead of direct `null` checks.
+
+3. **Functional style**
+   - Supports chaining with `map`, `flatMap`, `filter`.
+
+---
+
+## 🔹 Example
+
+### Without `Optional` (risk of NPE)
+```java
+public String getUserName(User user) {
+    return user.getName(); // Risk of NullPointerException if user is null
+}
+```
+### With Optional
+```java
+import java.util.Optional;
+
+public String getUserName(Optional<User> user) {
+    return user
+            .map(User::getName)        // safely extract name if user is present
+            .orElse("Unknown");        // default value if user is empty
+}
+```
+* 👉 Here, Optional forces the caller to handle the "no value" case safely.
+# 🔹 Java Optional
+
+## 🔑 Common Methods
+- `Optional.of(value)` → Wrap non-null value (**throws NPE if null**).
+- `Optional.ofNullable(value)` → Wrap value or empty if null.
+- `Optional.empty()` → Represents no value.
+- `isPresent()` / `isEmpty()` → Check presence of value.
+- `ifPresent(consumer)` → Run code if value is present.
+- `orElse(default)` → Provide default value if empty.
+- `orElseGet(supplier)` → Provide lazy default if empty.
+- `orElseThrow(exceptionSupplier)` → Throw exception if empty.
+
+---
+
+## ⚠️ Pitfalls & Misuse
+1. **Using `Optional.get()` directly**  
+   - Throws `NoSuchElementException` if empty → defeats the purpose.  
+   - ✅ Use `orElse()` / `orElseThrow()` instead.  
+
+2. **Using `Optional` in fields**  
+   - Not recommended (e.g., in JPA entities).  
+   - Designed for **method return values**, not storage.  
+
+3. **Serialization issues**  
+   - Some frameworks (Jackson, Hibernate, JPA) may not handle `Optional` fields well.  
+
+4. **Performance overhead**  
+   - Small overhead from wrapping/unwrapping.  
+   - Matters only in **tight loops / high-performance code**.  
+
+5. **Overusing it**  
+   - Not every nullable return should be `Optional`.  
+   - Sometimes `null` + documentation is more appropriate.  
+   - Best for **API boundaries** where absence of value is expected.  
+
+---
+
+## ✅ Summary
+- `Optional` is a **safer alternative** to returning `null`.  
+- Encourages **explicit handling** of missing values.  
+- Avoid pitfalls: don’t misuse `get()`, don’t use in fields, and don’t overuse it.  
+
+# Question 10. What is immutability? How do you create an immutable class?
+# 🔹 Immutability in Java
+
+## 📌 What is Immutability?
+- An **immutable object** is an object whose state **cannot be changed** after it is created.
+- All fields are set during construction and never modified later.
+- Examples in Java: `String`, `Integer`, `LocalDate`.
+
+---
+
+## ✅ Benefits
+- **Thread-safety** → Immutable objects can be safely shared across threads without synchronization.
+- **Cache-friendly** → Can be reused freely since state never changes.
+- **Predictability** → No unexpected changes → fewer bugs.
+
+---
+
+## 🛠️ How to Create an Immutable Class
+Steps to follow:
+1. **Declare the class as `final`** → prevents subclassing.
+2. **Make all fields `private` and `final`** → ensures state cannot change after construction.
+3. **Initialize fields via constructor** → no setters.
+4. **No setters** → do not provide methods to modify fields.
+5. **Defensive copies**  
+   - For mutable objects (like `Date`, collections), return **copies** instead of direct references.
+
+---
+
+## 🧑‍💻 Example
+
+```java
+import java.util.Date;
+
+public final class Person {
+    private final String name;
+    private final int age;
+    private final Date birthDate; // mutable object
+
+    public Person(String name, int age, Date birthDate) {
+        this.name = name;
+        this.age = age;
+        // Defensive copy to protect immutability
+        this.birthDate = new Date(birthDate.getTime());
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public int getAge() {
+        return age;
+    }
+
+    public Date getBirthDate() {
+        // Return defensive copy, not original
+        return new Date(birthDate.getTime());
+    }
+}
+```
+# 🚫 Wrong Practices
+
+- ❌ **Providing setters (`setName()`, `setAge()`)**  
+  Breaks immutability since fields can be modified after creation.
+
+- ❌ **Returning mutable objects directly (`birthDate`)**  
+  Allows external code to change internal state.
+
+---
+
+# ✅ Summary
+
+- **Immutable class** → object’s state cannot change once created.  
+- **Key rules:**  
+  - `final class` → prevents subclassing.  
+  - `private final fields` → ensures fields are initialized once.  
+  - **No setters** → prevents modification after construction.  
+  - **Defensive copies** → avoid exposing mutable objects.  
+- **Benefits:**  
+  - Thread-safety  
+  - Reusability  
+  - Reliability & fewer bugs  
